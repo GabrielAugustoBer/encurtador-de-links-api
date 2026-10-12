@@ -2,9 +2,10 @@ const express = require("express");
 const { Pool } = require("pg");
 const crypto = require("node:crypto");
 require("dotenv").config();
+const cors = require("cors");
 
 const app = express();
-app.use(express.json());
+app.use(cors());
 let db = null;
 
 if (process.env.NODE_ENV === "test") {
