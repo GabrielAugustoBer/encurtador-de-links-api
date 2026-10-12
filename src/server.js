@@ -5,21 +5,29 @@ require("dotenv").config();
 
 const app = express();
 app.use(express.json());
+let db = null;
 
-const db = new Pool({
-	connectionString: process.env.DATABASE_URL,
-	ssl: {
-		rejectUnauthorized: false,
-	},
-});
-
-// 1. Rota de teste inicial
+if (process.env.NODE_ENV === "test") {
+	db = new Pool({
+		connectionString: process.env.DATABASE_URL_TEST,
+		ssl: {
+			rejectUnauthorized: false,
+		},
+	});
+} else {
+	db = new Pool({
+		connectionString: process.env.DATABASE_URL,
+		ssl: {
+			rejectUnauthorized: false,
+		},
+	});
+}
 
 app.get("/", (_req, res) => {
 	res.send("Servidor rodando com sucesso!");
 });
 
-// 2. Rota para encurtar URL
+// 1. Rota para encurtar URL
 app.post("/shorten", async (req, res) => {
 	try {
 		const { longURL } = req.body;
@@ -40,7 +48,7 @@ app.post("/shorten", async (req, res) => {
 	}
 });
 
-// 3. Rota para redirecionar para a URL original
+// 2. Rota para redirecionar para a URL original
 app.get("/:shortCode", async (req, res) => {
 	try {
 		const { shortCode } = req.params;
@@ -63,7 +71,7 @@ app.get("/:shortCode", async (req, res) => {
 	}
 });
 
-// 4. Rota para ver os status do shortCode
+// 3. Rota para ver os status do shortCode
 app.get("/:shortCode/stats", async (req, res) => {
 	try {
 		const { shortCode } = req.params;
@@ -86,8 +94,29 @@ app.get("/:shortCode/stats", async (req, res) => {
 	}
 });
 
-// 5. Inicialização do servidor
-if (process.env.NODE_ENV !== "test") {
+//4. Rota para deletar o shortCode
+app.delete("/:shortCode/delete", async (req, res) => {
+	try {
+		const { shortCode } = req.params;
+
+		const queryText = "DELETE FROM links WHERE short_code = $1 RETURNING *";
+		const result = await db.query(queryText, [shortCode]);
+
+		if (result.rows[0]) {
+			return res.status(200).send("Registro deletado");
+		} else {
+			return res.status(404).send("Link não encontrado");
+		}
+	} catch (error) {
+		console.error(error);
+		return res.status(500).send("Erro interno no servidor");
+	}
+});
+
+if (process.env.NODE_ENV === "test") {
+	const PORT = process.env.PORT_TEST;
+	console.log(`Modo de teste rodando em http://localhost:${PORT}`);
+} else {
 	const PORT = process.env.PORT;
 	app.listen(PORT, () => {
 		console.log(`Servidor rodando em http://localhost:${PORT}`);
