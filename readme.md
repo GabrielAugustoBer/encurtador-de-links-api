@@ -101,7 +101,7 @@ Uma API RESTful robusta e de alta performance para encurtar URLs, monitorar mét
 
 1. **Clonar o Repositório**:
    ```bash
-   git clone https://github.com/seu-usuario/encurtador-de-links.git
+   git clone https://github.com/GabrielAugustoBer/encurtador-de-links.git
    cd encurtador-de-links
    ```
 
