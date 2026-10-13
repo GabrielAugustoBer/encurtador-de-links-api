@@ -167,3 +167,9 @@ encurtador-de-links/
 ├── package.json           # Dependências e scripts do projeto
 └── README.md              # Documentação oficial do projeto
 ```
+
+## ⏭️ Proximos Passos
+
+- Desenvolvimento da Interface WEB
+- Sistema de Login
+- Gerar mais dados(localização de user)
