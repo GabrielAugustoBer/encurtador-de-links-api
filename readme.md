@@ -1,175 +1,213 @@
 # 🔗 Encurtador de Links API
 
-Uma API RESTful robusta e de alta performance para encurtar URLs, monitorar métricas de acesso e gerenciar links. O projeto foi desenvolvido com foco nas melhores práticas de engenharia de software, incluindo **testes de integração atômicos**, **isolamento total de ambiente** e utilização de **branches efêmeras no PostgreSQL (Neon DB)**.
+API REST para encurtar URLs, consultar links e estatísticas de acesso e cadastrar usuários. O servidor usa Express e PostgreSQL; o banco pode ser hospedado no Neon ou em outro serviço compatível com PostgreSQL.
 
----
+## 🛠️ Tecnologias
 
-## 🛠️ Tecnologias Utilizadas
+- [Node.js](https://nodejs.org/) e [Express](https://expressjs.com/)
+- [PostgreSQL](https://www.postgresql.org/) e [`pg`](https://node-postgres.com/)
+- [Neon](https://neon.tech/) como opção de hospedagem do PostgreSQL
+- [Jest](https://jestjs.io/) e [Supertest](https://github.com/ladjs/supertest) para testes
+- [`dotenv`](https://github.com/motdotla/dotenv) para carregar variáveis do arquivo `.env`
+- [Biome](https://biomejs.dev/) para verificação e formatação do código
 
-- **Runtime & Server**: [Node.js](https://nodejs.org/) & [Express](https://expressjs.com/)
-- **Banco de Dados**: [PostgreSQL](https://www.postgresql.org/) via [Neon DB](https://neon.tech/) (Servidor Serverless)
-- **Driver de Banco**: [`pg` (node-postgres)](https://node-postgres.com/)
-- **Testes de Integração**: [Jest](https://jestjs.io/) & [Supertest](https://github.com/ladjs/supertest)
-- **Gerenciamento de Variáveis de Ambiente**: [`dotenv`](https://github.com/motdotla/dotenv)
+## 🚀 Como executar
 
----
+### Pré-requisitos
 
-## 📐 Arquitetura & Boas Práticas
+- Node.js e npm
+- Um banco PostgreSQL acessível pela aplicação
 
-- **Testes Atômicos e Independentes**: Cada teste é responsável pelo seu próprio ciclo de setup e limpeza, garantindo independência total na execução da suíte de testes.
-- **Isolamento de Banco de Dados**: A aplicação alterna dinamicamente a conexão do banco com base na variável `NODE_ENV`. Testes jamais afetam o banco de produção.
-- **Suporte a Branches Efêmeras (Neon)**: A suíte de testes executa contra uma branch temporária isolada do Neon DB.
-- **Execução em Memória no Modo Teste**: O servidor previne o bind de porta física (`app.listen()`) durante a execução do Jest, permitindo que o Supertest gerencie requisições HTTP diretamente na memória.
+### 1. Clonar e instalar
 
----
+```bash
+git clone https://github.com/GabrielAugustoBer/encurtador-de-links-api.git
+cd encurtador-de-links-api
+npm install
+```
 
-## 📌 Rotas da API
+### 2. Configurar as variáveis de ambiente
+
+Crie um arquivo `.env` na raiz do projeto:
+
+```env
+PORT=3000
+PORT_TEST=3030
+DATABASE_URL=postgresql://USUARIO:SENHA@HOST/BANCO?sslmode=require
+DATABASE_URL_TEST=postgresql://USUARIO:SENHA@HOST/BANCO_TESTE?sslmode=require
+```
+
+Preencha `DATABASE_URL` com a string de conexão do seu banco. O servidor usa `DATABASE_URL_TEST` quando `NODE_ENV=test`. Os testes atuais usam um banco simulado e não precisam de uma conexão PostgreSQL.
+
+### 3. Criar as tabelas
+
+Execute no banco:
+
+```sql
+CREATE TABLE IF NOT EXISTS links (
+  id SERIAL PRIMARY KEY,
+  short_code VARCHAR(10) UNIQUE NOT NULL,
+  long_url TEXT NOT NULL,
+  clicks INT DEFAULT 0,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS users (
+  id SERIAL PRIMARY KEY,
+  name TEXT NOT NULL,
+  email TEXT NOT NULL
+);
+```
+
+### 4. Iniciar a API
+
+```bash
+npm run dev
+# ou
+npm start
+```
+
+O servidor usa a porta definida em `PORT`. A rota `GET /` retorna uma mensagem indicando que o servidor está ativo.
+
+## 📌 Rotas
 
 | Método | Endpoint | Descrição |
-| :--- | :--- | :--- |
-| `POST` | `/shorten` | Gera um novo código encurtado para uma URL válida |
-| `GET` | `/:shortCode` | Redireciona para a URL original e incrementa a contagem de cliques |
-| `GET` | `/:shortCode/stats` | Retorna as estatísticas de acesso e metadados do link |
-| `DELETE` | `/:shortCode/delete` | Remove um link do banco de dados |
+| --- | --- | --- |
+| `POST` | `/createShorten` | Cria um link curto |
+| `GET` | `/allShorten` | Lista os links |
+| `GET` | `/:shortCode` | Incrementa os cliques e redireciona para a URL original |
+| `GET` | `/:shortCode/stats` | Consulta os dados e os cliques de um link |
+| `DELETE` | `/links/:shortCode/delete` | Exclui um link |
+| `POST` | `/createUser` | Cadastra um usuário |
+| `GET` | `/all-users` | Lista os usuários |
+| `GET` | `/` | Verifica se o servidor está ativo |
 
----
+As rotas que recebem JSON esperam o cabeçalho `Content-Type: application/json`.
 
-## 📄 Detalhamento dos Endpoints
+## 📄 Exemplos de uso
 
-### 1. Encurtar URL
-- **Endpoint**: `POST /shorten`
-- **Headers**: `Content-Type: application/json`
-- **Body**:
-  ```json
-  {
-    "longURL": "https://www.google.com"
-  }
-  ```
-- **Respostas**:
-  - `201 Created`:
-    ```json
-    {
-      "shortCode": "a1b2c3d4"
-    }
-    ```
-  - `400 Bad Request`: `URL inválida`
+### Criar um link curto
 
----
+```http
+POST /createShorten
+Content-Type: application/json
+```
 
-### 2. Redirecionar URL
-- **Endpoint**: `GET /:shortCode`
-- **Parâmetros de Rota**: `shortCode` (ex: `a1b2c3d4`)
-- **Respostas**:
-  - `302 Found`: Redireciona automaticamente para a URL original associada.
-  - `404 Not Found`: Link não encontrado.
+```json
+{
+  "longURL": "https://www.google.com"
+}
+```
 
----
+Resposta `201 Created`:
 
-### 3. Estatísticas do Link
-- **Endpoint**: `GET /:shortCode/stats`
-- **Parâmetros de Rota**: `shortCode` (ex: `a1b2c3d4`)
-- **Respostas**:
-  - `200 OK`:
-    ```json
-    {
-      "shortCode": "a1b2c3d4",
-      "longURL": "https://www.google.com",
-      "clicks": 5
-    }
-    ```
-  - `404 Not Found`: Link não encontrado.
+```json
+{
+  "shortCode": "a1b2c3d4"
+}
+```
 
----
+Uma URL inválida retorna `400 Bad Request`.
 
-### 4. Deletar Link
-- **Endpoint**: `DELETE /:shortCode/delete`
-- **Parâmetros de Rota**: `shortCode` (ex: `a1b2c3d4`)
-- **Respostas**:
-  - `200 OK`: `Registro deletado`
-  - `404 Not Found`: Link não encontrado.
+### Listar links
 
----
+```http
+GET /allShorten
+```
 
-## 🚀 Como Clonar e Rodar o Projeto Localmente
+Retorna uma lista com `id`, `shortCode`, `longURL`, `clicks` e `created_at`.
 
-### 📋 Pré-requisitos
-- **Node.js** (v18 ou superior)
-- **Git**
-- Uma conta ativa no **Neon DB** (ou uma instância local de PostgreSQL)
+### Acessar um link curto
 
-### 💻 Passo a Passo
+```http
+GET /a1b2c3d4
+```
 
-1. **Clonar o Repositório**:
-   ```bash
-   git clone https://github.com/GabrielAugustoBer/encurtador-de-links.git
-   cd encurtador-de-links
-   ```
+Quando o código existe, a API incrementa o contador de cliques e responde com um redirecionamento temporário (`302 Found`) para a URL original, incluída no cabeçalho `Location`. Um código inexistente retorna `404 Not Found`.
 
-2. **Instalar as Dependências**:
-   ```bash
-   npm install
-   ```
+### Consultar estatísticas
 
-3. **Configurar o Arquivo `.env`**:
-   Crie um arquivo `.env` na raiz do projeto com o seguinte modelo:
-   ```env
-   PORT=3000
-   PORT_TEST=3030
-   DATABASE_URL=postgresql://usuario:senha@ep-producao.neon.tech/neondb?sslmode=require
-   DATABASE_URL_TEST=postgresql://usuario:senha@ep-teste.neon.tech/neondb?sslmode=require
-   ```
+```http
+GET /a1b2c3d4/stats
+```
 
-4. **Estrutura da Tabela no Banco de Dados**:
-   Execute a query SQL abaixo no seu banco para criar a tabela de links:
-   ```sql
-   CREATE TABLE IF NOT EXISTS links (
-     id SERIAL PRIMARY KEY,
-     short_code VARCHAR(10) UNIQUE NOT NULL,
-     long_url TEXT NOT NULL,
-     clicks INT DEFAULT 0,
-     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-   );
-   ```
+Resposta `200 OK`:
 
-5. **Iniciar a Aplicação**:
-   ```bash
-   # Modo de desenvolvimento
-   npm run dev
+```json
+{
+  "shortCode": "a1b2c3d4",
+  "longURL": "https://www.google.com",
+  "clicks": 5
+}
+```
 
-   # Modo de produção
-   npm start
-   ```
+### Excluir um link
 
----
+```http
+DELETE /links/a1b2c3d4/delete
+```
 
-## 🧪 Executando os Testes
+Retorna `200 OK` com a mensagem `Registro deletado`, ou `404 Not Found` se o código não existir.
 
-Para executar a suíte de testes de integração e verificar a integridade de todas as rotas CRUD:
+### Cadastrar e listar usuários
+
+```http
+POST /createUser
+Content-Type: application/json
+```
+
+```json
+{
+  "name": "Ana",
+  "email": "ana@example.com"
+}
+```
+
+A criação retorna `201 Created` com os campos `name` e `email`. Para listar os usuários, use `GET /all-users`.
+
+## 🧪 Testes
+
+Execute a suíte com:
 
 ```bash
 npm test
 ```
 
-A suíte executará os testes atômicos alternando automaticamente para a variável `DATABASE_URL_TEST`.
+Os testes das rotas usam uma implementação simulada do banco de dados, portanto não exigem acesso ao Neon nem configuração de `DATABASE_URL_TEST`.
 
----
+## ✅ Verificação e formatação
 
-## 📁 Estrutura do Projeto
-
-```text
-encurtador-de-links/
-├── src/
-│   ├── server.js          # Configuração do Express e definições das rotas
-│   └── tests/
-│       └── app.test.js    # Suíte de testes de integração com Jest e Supertest
-├── .env                   # Variáveis de ambiente (não comitado)
-├── .gitignore             # Arquivos ignorados pelo Git
-├── package.json           # Dependências e scripts do projeto
-└── README.md              # Documentação oficial do projeto
+```bash
+npm run check        # Verificação do Biome
+npm run lint         # Apenas lint
+npm run format       # Formata os arquivos
+npm run format:check # Verifica a formatação sem alterar arquivos
 ```
 
-## ⏭️ Proximos Passos
+## 📁 Estrutura do projeto
 
-- Desenvolvimento da Interface WEB
-- Sistema de Login
-- Gerar mais dados(localização de user)
+```text
+encurtador-de-links-api/
+├── src/
+│   ├── controllers/
+│   │   ├── shorten.controller.js
+│   │   └── users.controller.js
+│   ├── routes/
+│   │   ├── shorten.route.js
+│   │   └── users.route.js
+│   ├── services/
+│   │   └── users.services.js
+│   ├── tests/
+│   │   ├── shorten.route.test.js
+│   │   └── users.route.test.js
+│   └── server.js
+├── .env
+├── package.json
+└── readme.md
+```
+
+## ⏭️ Próximos passos
+
+- Desenvolver uma interface web
+- Implementar autenticação
+- Coletar métricas adicionais de acesso
