@@ -4,7 +4,7 @@ module.exports = function createShortenService(linksRepository) {
 	return {
 		allShorten: async () => {
 			const links = await linksRepository.findAll();
-			return links.map(row => ({
+			return links.map((row) => ({
 				id: row.id,
 				shortCode: row.short_code,
 				longURL: row.long_url,
@@ -12,7 +12,7 @@ module.exports = function createShortenService(linksRepository) {
 				created_at: row.created_at,
 			}));
 		},
-		createShorten: async longURL => {
+		createShorten: async (longURL) => {
 			if (URL.canParse(longURL) !== true) {
 				return null;
 			}
@@ -21,7 +21,7 @@ module.exports = function createShortenService(linksRepository) {
 			await linksRepository.create(shortCode, longURL);
 			return shortCode;
 		},
-		redirectShort: async shortCode => {
+		redirectShort: async (shortCode) => {
 			const link = await linksRepository.findByShortCode(shortCode);
 			if (!link) {
 				return null;
@@ -30,7 +30,7 @@ module.exports = function createShortenService(linksRepository) {
 			await linksRepository.incrementClicks(shortCode);
 			return link.long_url;
 		},
-		statsShort: async shortCode => {
+		statsShort: async (shortCode) => {
 			const link = await linksRepository.findByShortCode(shortCode);
 			if (!link) {
 				return null;
@@ -42,6 +42,6 @@ module.exports = function createShortenService(linksRepository) {
 				clicks: link.clicks,
 			};
 		},
-		deleteShort: shortCode => linksRepository.deleteByShortCode(shortCode),
+		deleteShort: (shortCode) => linksRepository.deleteByShortCode(shortCode),
 	};
 };

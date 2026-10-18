@@ -12,20 +12,20 @@ module.exports = function createLinksRepository(db) {
 				[shortCode, longURL],
 			);
 		},
-		findByShortCode: async shortCode => {
+		findByShortCode: async (shortCode) => {
 			const result = await db.query(
 				"SELECT * FROM links WHERE short_code = $1",
 				[shortCode],
 			);
 			return result.rows[0] ?? null;
 		},
-		incrementClicks: async shortCode => {
+		incrementClicks: async (shortCode) => {
 			await db.query(
 				"UPDATE links SET clicks = clicks + 1 WHERE short_code = $1",
 				[shortCode],
 			);
 		},
-		deleteByShortCode: async shortCode => {
+		deleteByShortCode: async (shortCode) => {
 			const result = await db.query(
 				"DELETE FROM links WHERE short_code = $1 RETURNING *",
 				[shortCode],
