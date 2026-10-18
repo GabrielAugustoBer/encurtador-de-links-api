@@ -192,10 +192,14 @@ encurtador-de-links-api/
 │   ├── controllers/
 │   │   ├── shorten.controller.js
 │   │   └── users.controller.js
+│   ├── repositories/
+│   │   ├── links.repository.js
+│   │   └── users.repository.js
 │   ├── routes/
 │   │   ├── shorten.route.js
 │   │   └── users.route.js
 │   ├── services/
+│   │   ├── shorten.services.js
 │   │   └── users.services.js
 │   ├── tests/
 │   │   ├── shorten.route.test.js
