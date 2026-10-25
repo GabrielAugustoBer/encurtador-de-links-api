@@ -7,6 +7,7 @@
 		"start": "node src/server.js",
 		"test": "jest",
 		"dev": "node src/server.js",
+		"migrate:passwords": "node scripts/migrate-plaintext-passwords.js",
 		"check": "biome check .",
 		"lint": "biome lint .",
 		"format": "biome format --write .",
@@ -16,12 +17,18 @@
 	"author": "",
 	"license": "ISC",
 	"type": "commonjs",
+	"engines": {
+		"node": ">=20"
+	},
 	"dependencies": {
 		"@neondatabase/serverless": "^1.2.0",
-		"cors": "^2.8.6",
-		"crypto": "^1.0.1",
+		"bcryptjs": "^3.0.3",
 		"dotenv": "^18.0.8",
 		"express": "^5.3.0",
+		"express-rate-limit": "^8.7.1",
+		"helmet": "^8.3.0",
+		"jsonwebtoken": "^9.0.3",
+		"maxmind": "^5.0.7",
 		"pg": "^8.23.1"
 	},
 	"devDependencies": {

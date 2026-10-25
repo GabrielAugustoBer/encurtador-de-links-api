@@ -1,0 +1,6 @@
+BEGIN;
+
+ALTER TABLE links
+	ALTER COLUMN short_code TYPE VARCHAR(24);
+
+COMMIT;

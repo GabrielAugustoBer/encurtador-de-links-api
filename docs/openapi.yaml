@@ -1,0 +1,850 @@
+openapi: 3.0.3
+info:
+  title: Encurtador de Links API
+  version: 1.0.0
+  description: |
+    API REST para cadastro e autenticação de usuários, gerenciamento de links
+    curtos e consulta de métricas. Importe este arquivo no Apidog para gerar
+    a documentação e os cenários de requisição.
+servers:
+  - url: http://localhost:3000
+    description: Desenvolvimento local
+tags:
+  - name: Autenticação
+  - name: Usuários
+  - name: Links
+  - name: Analytics
+  - name: Redirecionamentos
+paths:
+  /:
+    get:
+      tags: [Redirecionamentos]
+      summary: Verifica se a API está ativa
+      responses:
+        "200":
+          description: Servidor ativo
+          content:
+            text/html:
+              schema:
+                type: string
+              example: Servidor rodando com sucesso!
+  /createUser:
+    post:
+      tags: [Autenticação]
+      summary: Cadastra um usuário
+      description: A senha deve ter pelo menos 12 caracteres e no máximo 72 bytes UTF-8.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateUserRequest"
+      responses:
+        "201":
+          description: Usuário cadastrado
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "409":
+          description: E-mail já cadastrado
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "429":
+          $ref: "#/components/responses/TooManyRequests"
+        "500":
+          $ref: "#/components/responses/InternalError"
+  /login:
+    post:
+      tags: [Autenticação]
+      summary: Autentica um usuário
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LoginRequest"
+      responses:
+        "200":
+          description: Autenticação realizada
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LoginResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          description: E-mail ou senha inválidos
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "429":
+          $ref: "#/components/responses/TooManyRequests"
+        "500":
+          $ref: "#/components/responses/InternalError"
+  /logout:
+    post:
+      tags: [Autenticação]
+      summary: Revoga o token atual
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Logout realizado
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [message]
+                properties:
+                  message:
+                    type: string
+                    example: Logout realizado com sucesso
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "500":
+          $ref: "#/components/responses/InternalError"
+  /me:
+    get:
+      tags: [Usuários]
+      summary: Consulta o perfil autenticado
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Perfil do usuário autenticado
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+    patch:
+      tags: [Usuários]
+      summary: Atualiza nome e/ou e-mail do perfil
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateProfileRequest"
+      responses:
+        "200":
+          description: Perfil atualizado
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          description: Usuário não encontrado
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "409":
+          description: E-mail já cadastrado
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+  /all-users:
+    get:
+      tags: [Usuários]
+      summary: Lista todos os usuários
+      description: Disponível somente para usuários com papel admin.
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Lista de usuários
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/User"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          description: Permissão de administrador necessária
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "500":
+          $ref: "#/components/responses/InternalError"
+  /createShorten:
+    post:
+      tags: [Links]
+      summary: Cria um link curto
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateLinkRequest"
+      responses:
+        "201":
+          description: Link criado
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [shortCode]
+                properties:
+                  shortCode:
+                    $ref: "#/components/schemas/ShortCode"
+        "400":
+          description: URL inválida (somente HTTP/HTTPS, sem credenciais e até 2048 caracteres)
+          content:
+            text/html:
+              schema:
+                type: string
+                example: O URL não é valido
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "500":
+          $ref: "#/components/responses/InternalErrorText"
+  /allShorten:
+    get:
+      tags: [Links]
+      summary: Lista os links do usuário autenticado
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Links pertencentes ao usuário autenticado
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Link"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "500":
+          $ref: "#/components/responses/InternalErrorText"
+  /links/{shortCode}:
+    parameters:
+      - $ref: "#/components/parameters/ShortCode"
+    get:
+      tags: [Links]
+      summary: Consulta um link próprio
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Dados do link
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Link"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalError"
+    patch:
+      tags: [Links]
+      summary: Atualiza a URL de destino
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateLinkRequest"
+      responses:
+        "200":
+          description: Link atualizado
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Link"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalError"
+    delete:
+      tags: [Links]
+      summary: Exclui um link próprio
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Registro excluído
+          content:
+            text/html:
+              schema:
+                type: string
+                example: Registro deletado
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          description: Link não encontrado
+          content:
+            text/html:
+              schema:
+                type: string
+                example: Link não encontrado
+        "500":
+          $ref: "#/components/responses/InternalErrorText"
+  /links/{shortCode}/delete:
+    parameters:
+      - $ref: "#/components/parameters/ShortCode"
+    delete:
+      tags: [Links]
+      summary: Exclui um link (rota legada)
+      deprecated: true
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Registro excluído
+          content:
+            text/html:
+              schema:
+                type: string
+                example: Registro deletado
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          description: Link não encontrado
+          content:
+            text/html:
+              schema:
+                type: string
+                example: Link não encontrado
+        "500":
+          $ref: "#/components/responses/InternalErrorText"
+  /links/{shortCode}/settings:
+    parameters:
+      - $ref: "#/components/parameters/ShortCode"
+    patch:
+      tags: [Links]
+      summary: Atualiza expiração e estado do link
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateLinkSettingsRequest"
+      responses:
+        "200":
+          description: Configurações atualizadas
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Link"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalError"
+  /links/{shortCode}/disable:
+    parameters:
+      - $ref: "#/components/parameters/ShortCode"
+    post:
+      tags: [Links]
+      summary: Desativa um link próprio
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Link desativado
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ActiveState"
+              example:
+                active: false
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalError"
+  /links/{shortCode}/enable:
+    parameters:
+      - $ref: "#/components/parameters/ShortCode"
+    post:
+      tags: [Links]
+      summary: Reativa um link próprio não expirado
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Link reativado
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ActiveState"
+              example:
+                active: true
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalError"
+  /links/{shortCode}/analytics:
+    parameters:
+      - $ref: "#/components/parameters/ShortCode"
+      - $ref: "#/components/parameters/FromDate"
+      - $ref: "#/components/parameters/ToDate"
+    get:
+      tags: [Analytics]
+      summary: Resume cliques e dias ativos
+      description: O período máximo é de 366 dias. Por padrão, são usados os últimos 30 dias, em UTC.
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Resumo de acessos
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AnalyticsSummary"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalError"
+  /links/{shortCode}/analytics/countries:
+    parameters:
+      - $ref: "#/components/parameters/ShortCode"
+      - $ref: "#/components/parameters/FromDate"
+      - $ref: "#/components/parameters/ToDate"
+    get:
+      tags: [Analytics]
+      summary: Agrupa cliques por país
+      description: O período máximo é de 366 dias. Por padrão, são usados os últimos 30 dias, em UTC.
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Cliques agrupados por país
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CountryAnalytics"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalError"
+  /links/{shortCode}/analytics/timeseries:
+    parameters:
+      - $ref: "#/components/parameters/ShortCode"
+      - $ref: "#/components/parameters/FromDate"
+      - $ref: "#/components/parameters/ToDate"
+    get:
+      tags: [Analytics]
+      summary: Retorna cliques por dia
+      description: Dias sem cliques são incluídos com valor zero. O período máximo é de 366 dias; por padrão, são usados os últimos 30 dias, em UTC.
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Série diária de cliques
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TimeseriesAnalytics"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalError"
+  /{shortCode}:
+    parameters:
+      - $ref: "#/components/parameters/ShortCode"
+    get:
+      tags: [Redirecionamentos]
+      summary: Redireciona para a URL original
+      description: Rota pública. Incrementa os cliques e retorna 302; links expirados ou desativados retornam 410.
+      responses:
+        "302":
+          description: Redirecionamento temporário
+          headers:
+            Location:
+              description: URL original do link
+              schema:
+                type: string
+                format: uri
+        "404":
+          description: Link não encontrado
+          content:
+            text/html:
+              schema:
+                type: string
+                example: Link não encontrado
+        "410":
+          description: Link expirado ou desativado
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "500":
+          $ref: "#/components/responses/InternalErrorText"
+  /{shortCode}/stats:
+    parameters:
+      - $ref: "#/components/parameters/ShortCode"
+    get:
+      tags: [Links]
+      summary: Consulta estatísticas de um link próprio
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Estatísticas do link
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LinkStats"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          description: Link não encontrado
+          content:
+            text/html:
+              schema:
+                type: string
+                example: Link não encontrado
+        "500":
+          $ref: "#/components/responses/InternalErrorText"
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  parameters:
+    ShortCode:
+      name: shortCode
+      in: path
+      required: true
+      description: Código curto hexadecimal de 24 caracteres.
+      schema:
+        $ref: "#/components/schemas/ShortCode"
+    FromDate:
+      name: from
+      in: query
+      required: false
+      description: Data inicial inclusiva em UTC. Padrão de 30 dias antes da data atual.
+      schema:
+        type: string
+        format: date
+        example: "2026-10-01"
+    ToDate:
+      name: to
+      in: query
+      required: false
+      description: Data final inclusiva em UTC. Padrão é a data atual.
+      schema:
+        type: string
+        format: date
+        example: "2026-10-25"
+  schemas:
+    Error:
+      type: object
+      required: [error]
+      properties:
+        error:
+          type: string
+          example: Dados inválidos
+    User:
+      type: object
+      required: [id, name, email, role]
+      properties:
+        id:
+          type: integer
+          example: 1
+        name:
+          type: string
+          example: Ana
+        email:
+          type: string
+          format: email
+          example: ana@example.com
+        role:
+          type: string
+          enum: [user, admin]
+          example: user
+    CreateUserRequest:
+      type: object
+      required: [name, email, senha]
+      additionalProperties: false
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 100
+          example: Ana
+        email:
+          type: string
+          format: email
+          maxLength: 254
+          example: ana@example.com
+        senha:
+          type: string
+          minLength: 12
+          format: password
+          example: senha-segura-com-12
+          description: Até 72 bytes UTF-8.
+    LoginRequest:
+      type: object
+      required: [email, senha]
+      additionalProperties: false
+      properties:
+        email:
+          type: string
+          format: email
+          example: ana@example.com
+        senha:
+          type: string
+          format: password
+          example: senha-segura-com-12
+    LoginResponse:
+      type: object
+      required: [token, user]
+      properties:
+        token:
+          type: string
+          description: JWT Bearer com validade de 15 minutos.
+        user:
+          $ref: "#/components/schemas/User"
+    UpdateProfileRequest:
+      type: object
+      minProperties: 1
+      additionalProperties: false
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 100
+          example: Ana Maria
+        email:
+          type: string
+          format: email
+          maxLength: 254
+          example: ana.maria@example.com
+    ShortCode:
+      type: string
+      pattern: "^[a-f0-9]{24}$"
+      example: a1b2c3d4e5f60718293a4b5c
+    CreateLinkRequest:
+      type: object
+      required: [longURL]
+      additionalProperties: false
+      properties:
+        longURL:
+          type: string
+          format: uri
+          maxLength: 2048
+          example: https://example.com/pagina
+          description: URL HTTP ou HTTPS sem credenciais embutidas.
+    UpdateLinkRequest:
+      type: object
+      required: [longURL]
+      additionalProperties: false
+      properties:
+        longURL:
+          type: string
+          format: uri
+          maxLength: 2048
+          example: https://example.com/destino-atualizado
+          description: URL HTTP ou HTTPS sem credenciais embutidas.
+    Link:
+      type: object
+      required: [id, shortCode, longURL, clicks, created_at, isActive, expiresAt]
+      properties:
+        id:
+          type: integer
+          example: 12
+        shortCode:
+          $ref: "#/components/schemas/ShortCode"
+        longURL:
+          type: string
+          format: uri
+          example: https://example.com/pagina
+        clicks:
+          type: integer
+          example: 25
+        created_at:
+          type: string
+          format: date-time
+        isActive:
+          type: boolean
+          example: true
+        expiresAt:
+          type: string
+          format: date-time
+          nullable: true
+    LinkStats:
+      type: object
+      required: [shortCode, longURL, clicks, isActive, expiresAt]
+      properties:
+        shortCode:
+          $ref: "#/components/schemas/ShortCode"
+        longURL:
+          type: string
+          format: uri
+        clicks:
+          type: integer
+        isActive:
+          type: boolean
+        expiresAt:
+          type: string
+          format: date-time
+          nullable: true
+    UpdateLinkSettingsRequest:
+      type: object
+      minProperties: 1
+      additionalProperties: false
+      properties:
+        expiresAt:
+          type: string
+          format: date-time
+          nullable: true
+          description: Data futura ISO 8601 com fuso horário; null remove a expiração.
+          example: "2026-12-31T23:59:59Z"
+        isActive:
+          type: boolean
+          example: true
+    ActiveState:
+      type: object
+      required: [active]
+      properties:
+        active:
+          type: boolean
+    AnalyticsSummary:
+      type: object
+      required: [from, to, clicks, active_days]
+      properties:
+        from:
+          type: string
+          format: date
+        to:
+          type: string
+          format: date
+        clicks:
+          type: integer
+        active_days:
+          type: integer
+    CountryAnalytics:
+      type: object
+      required: [from, to, countries]
+      properties:
+        from:
+          type: string
+          format: date
+        to:
+          type: string
+          format: date
+        countries:
+          type: array
+          items:
+            type: object
+            required: [country, clicks]
+            properties:
+              country:
+                type: string
+                example: BR
+                description: Código ISO de país ou unknown quando a localização não estiver disponível.
+              clicks:
+                type: integer
+                example: 120
+    TimeseriesAnalytics:
+      type: object
+      required: [from, to, series]
+      properties:
+        from:
+          type: string
+          format: date
+        to:
+          type: string
+          format: date
+        series:
+          type: array
+          items:
+            type: object
+            required: [date, clicks]
+            properties:
+              date:
+                type: string
+                format: date
+              clicks:
+                type: integer
+                example: 8
+  responses:
+    BadRequest:
+      description: Requisição ou dados inválidos
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+    Unauthorized:
+      description: Token ausente, inválido, expirado ou revogado
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+    NotFound:
+      description: Link não encontrado ou não pertence ao usuário autenticado
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+    TooManyRequests:
+      description: Limite de tentativas de cadastro/login excedido
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+    InternalError:
+      description: Erro interno no servidor
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+    InternalErrorText:
+      description: Erro interno no servidor
+      content:
+        text/html:
+          schema:
+            type: string
+            example: Erro interno no servidor
