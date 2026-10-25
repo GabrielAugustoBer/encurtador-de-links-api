@@ -35,6 +35,7 @@ Crie um arquivo `.env` na raiz do projeto:
 ```env
 PORT=3000
 PORT_TEST=3030
+FRONTEND_ORIGINS=http://localhost:5173,https://seu-frontend.vercel.app
 JWT_SECRET=gere_uma_chave_aleatoria_com_pelo_menos_32_bytes
 GEOIP_DATABASE_PATH=/caminho/seguro/GeoLite2-Country.mmdb
 TRUSTED_PROXY_HOPS=0
@@ -51,6 +52,8 @@ node -e "console.log(require('node:crypto').randomBytes(32).toString('hex'))"
 O servidor usa `DATABASE_URL_TEST` quando `NODE_ENV=test`. Os testes usam um banco simulado e não precisam de uma conexão PostgreSQL.
 
 `GEOIP_DATABASE_PATH` aponta para uma base MaxMind GeoLite2 Country em formato MMDB, instalada localmente; sem essa variável, a API ainda registra cliques, mas classifica a origem geográfica como `unknown`. Obtenha a base conforme os termos de licença da MaxMind e mantenha o arquivo fora do repositório. `TRUSTED_PROXY_HOPS` deve ser `0` quando a API recebe tráfego diretamente ou o número exato de proxies confiáveis à frente dela. A API não confia em `X-Forwarded-For` por padrão.
+
+`FRONTEND_ORIGINS` é uma lista separada por vírgulas das origens exatas autorizadas a chamar a API pelo navegador, sem caminhos, por exemplo `http://localhost:5173,https://seu-frontend.vercel.app`. Configure a URL pública real do frontend no ambiente de produção do Render; não use `*`. Requisições sem cabeçalho `Origin` (como chamadas servidor a servidor) continuam permitidas. O CORS aceita `GET`, `POST`, `PATCH` e `DELETE`, com os cabeçalhos `Authorization` e `Content-Type`; cookies/credenciais do navegador não são habilitados.
 
 Em produção, configure também o proxy reverso para aceitar somente tráfego esperado, termine TLS na borda confiável e mantenha `TRUSTED_PROXY_HOPS` alinhado à topologia real. Não defina esse valor para confiar em proxies controlados por clientes.
 

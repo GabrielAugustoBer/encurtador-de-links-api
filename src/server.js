@@ -6,11 +6,13 @@ const createAuthMiddleware = require("./middlewares/auth.middleware");
 const createUsersRouter = require("./routes/users.route");
 const createShortenRouter = require("./routes/shorten.route");
 const createGeoIpService = require("./services/geoip.service");
+const createCorsMiddleware = require("./middlewares/cors.middleware");
 require("dotenv").config();
 const app = express();
 
 app.set("json spaces", 2);
 app.use(helmet());
+app.use(createCorsMiddleware(process.env.FRONTEND_ORIGINS));
 app.use(express.json({ limit: "10kb" }));
 const trustedProxyHops = process.env.TRUSTED_PROXY_HOPS ?? "0";
 if (!/^\d+$/.test(trustedProxyHops) || Number(trustedProxyHops) > 20) {
