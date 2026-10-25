@@ -104,6 +104,8 @@ O servidor usa a porta definida em `PORT`. A rota `GET /` retorna uma mensagem i
 
 ### Documentação no Apidog
 
+A documentação hospedada no [Apidog](https://7bnw8q4wbb.apidog.io/) requer senha para acesso. O contrato OpenAPI versionado está em [`docs/openapi.yaml`](./docs/openapi.yaml), para importação ou manutenção da documentação.
+
 O contrato OpenAPI está em [`docs/openapi.yaml`](./docs/openapi.yaml). No Apidog, use **Importar** → **OpenAPI/Swagger** e selecione esse arquivo. Para apontar as requisições a outro ambiente, altere a URL de servidor `http://localhost:3000` ou configure o ambiente no próprio Apidog. As rotas protegidas usam autenticação **Bearer Token**; copie o token retornado por `POST /login`.
 
 | Método | Endpoint | Descrição |
